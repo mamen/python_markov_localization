@@ -12,19 +12,32 @@ class Direction(Enum):
     Left = 4
 
 
-class Position(dict):
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.__dict__ = self
+class Position():
+    x = 0
+    y = 0
+    direction = Direction.Right
 
+    def __init__(self, x, y, direction):
+        self.x = x
+        self.y = y
+        self.direction = direction
+
+
+class Step():
+    direction = Direction.Right
+    sensedDistance = 0
+
+    def __init__(self, direction, sensedDistance):
+        self.direction = direction
+        self.sensedDistance = sensedDistance
 
 N = 100
 
 board = np.full((N, N),  1 / (N*N))
 
-realPos = Position(x=10, y=10, dir=Direction.Right)
+realPos = Position(x=10, y=10, direction=Direction.Right)
 
-steps = [Direction.Right, Direction.Up, Direction.Up]
+steps = [Step(direction=Direction.Right, sensedDistance=80), Step(direction=Direction.Up, sensedDistance=50), Step(direction=Direction.Up, sensedDistance=45)]
 
 
 def plotMap():
@@ -38,13 +51,19 @@ def calcPrior(direction):
     # new bel at position x = sum over all old positions x { prob(new position x | sensordata now, pos old) * believe(old position)
 
     stepSize = getStepSize()
+    weights = [0.1, 0.2, 0.4, 0.2, 0.1]
 
     p = np.full((N, N),  1)
 
-    for i in range(1, N):
-        for j in range(1, N):
-            # board[i, j] =  * board[i, j]
-            print('TODO')
+    for i in range(0, N):
+        for j in range(0, N):
+
+            for k in range(1, N):
+
+                if 2 < k < 8:
+                    board[i, j + k] = board[i, j + k] * weights[k - 2]
+                else:
+                    board[i, j] = 0.0001
 
     return 0
 
@@ -54,6 +73,7 @@ def calcPosterior(sensorValue, direction):
 
 
 def getStepSize():
+    # x_t
     population = [3, 4, 5, 6, 7]
     weights = [0.1, 0.2, 0.4, 0.2, 0.1]
 
@@ -61,6 +81,7 @@ def getStepSize():
 
 
 def getSensorDerivation():
+    # z_t
     population = [-2, -1, 0, 1, 2]
     weights = [0.1, 0.2, 0.4, 0.2, 0.1]
 
@@ -112,10 +133,10 @@ def main():
 
     for step in steps:
         # 1. take step
-        doStep(step)
+        doStep(step.direction)
 
         # 2. calulate prior
-        calcPrior(step)
+        calcPrior(step.direction)
 
         # 3. calulate posterior
         calcPosterior(0, 0)
