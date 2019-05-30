@@ -30,7 +30,7 @@ class Step():
         self.direction = direction
         self.sensedDistance = sensedDistance
 
-N = 8
+N = 10
 
 map =  np.full((N, N), 0)
 
@@ -40,7 +40,7 @@ probabilities = np.full((N, N), 1 / (N * N))
 
 realPos = Position(x=3, y=3, direction=Direction.Right)
 
-steps = [Step(direction=Direction.Right, sensedDistance=4),
+steps = [Step(direction=Direction.Right, sensedDistance=2),
          Step(direction=Direction.Right, sensedDistance=50),
          Step(direction=Direction.Down, sensedDistance=45),
          Step(direction=Direction.Left, sensedDistance=45)]
@@ -61,6 +61,13 @@ def plotMap(map):
     ax.set_xticklabels(range(1, N))
     ax.set_yticklabels(range(1, N))
 
+    for i in range(len(map)):
+        for j in range(len(map)):
+            text = ax.text(j, i, np.round(map[i, j], 2), ha="center", va="center", color="w")
+
+    print(np.sum(map))
+
+    #ax.set_title("Harvest of local farmers (in tons/year)")
     plt.show()
 
 
@@ -86,6 +93,7 @@ def calcPrior(direction):
 
     newProbabilities[newProbabilities < epsilon] = epsilon
 
+
     return newProbabilities
 
 
@@ -108,7 +116,7 @@ def calcPosterior(sensorValue, direction):
                 for k in range(0, N - sensorValue - 2):
                     probabilities[i, k] = epsilon
 
-                for k in range(sensorValue - 2 - 1, sensorValue + 2):
+                for k in range(sensorValue - 2, sensorValue + 2):
                     probabilities[i, k] = probabilities[i, N - k] * sensorProbability[k - len(sensorValues) - 1]
 
                 for k in range(sensorValue + 2, N):
@@ -120,10 +128,6 @@ def calcPosterior(sensorValue, direction):
             elif direction == Direction.Left:
                 return 0
 
-    # 3 = 0,00001620204119
-    # 2 = 0,004957504353
-
-    print(probabilities)
     return 0
 
 
