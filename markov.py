@@ -34,24 +34,37 @@ N = 10
 
 map =  np.full((N, N), 0)
 
-epsilon = 1/100000
+epsilon = 1/(N*N*N)
 
 probabilities = np.full((N, N), 1 / (N * N))
 
-realPos = Position(x=3, y=3, direction=Direction.Right)
+realPos = Position(x=2, y=5, direction=Direction.Right)
 
-steps = [Step(direction=Direction.Right, sensedDistance=2),
-         Step(direction=Direction.Right, sensedDistance=50),
-         Step(direction=Direction.Down, sensedDistance=45),
-         Step(direction=Direction.Left, sensedDistance=45)]
+steps = [Step(direction=Direction.Right, sensedDistance=4),
+         Step(direction=Direction.Up, sensedDistance=2),
+         Step(direction=Direction.Left, sensedDistance=1),
+         Step(direction=Direction.Down, sensedDistance=3)]
 
 
-def plotMap(map):
+def normalize(matrix):
+    retVal = matrix.copy()
+
+    retVal = retVal - retVal.mean()
+    retVal = retVal / np.abs(retVal).max()
+
+    return retVal
+
+
+def plotData():
+    global probabilities
 
     # plot correlation matrix
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    cax = ax.matshow(map, vmin=0, vmax=np.max(map))
+
+    data = normalize(probabilities)
+
+    cax = ax.matshow(data, vmin=np.min(data), vmax=np.max(data))
     fig.colorbar(cax)
     ticks = np.arange(0, N, 1)
 
@@ -63,7 +76,7 @@ def plotMap(map):
 
     for i in range(len(map)):
         for j in range(len(map)):
-            text = ax.text(j, i, np.round(map[i, j], 2), ha="center", va="center", color="w")
+            text = ax.text(j, i, np.round(data[i, j], 2), ha="center", va="center", color="w")
 
     print(np.sum(map))
 
@@ -74,14 +87,8 @@ def plotMap(map):
 def calcPrior(direction):
     global probabilities, epsilon
 
-    # new bel at position x = sum over all old positions x { prob(new position x | sensordata now, pos old) * believe(old position)
-
-    # stepSize = getStepSize()
-
     steps = [3, 4, 5, 6, 7]
     stepProbability = [0, 0, 0, 0.1, 0.2, 0.4, 0.2, 0.1]
-
-    p = np.full((N, N),  1)
 
     newProbabilities = np.full((N, N), 0.0)
 
@@ -93,7 +100,6 @@ def calcPrior(direction):
 
     newProbabilities[newProbabilities < epsilon] = epsilon
 
-
     return newProbabilities
 
 
@@ -104,6 +110,8 @@ def calcPosterior(sensorValue, direction):
 
     sensorProbability = [0.1, 0.2, 0.4, 0.2, 0.1]
 
+    newProbabilities = np.full((N, N), 0.0)
+
 
     for i in range(0, N):
         for j in range(0, N):
@@ -112,15 +120,15 @@ def calcPosterior(sensorValue, direction):
                 return 0
 
             elif direction == Direction.Right:
-
                 for k in range(0, N - sensorValue - 2):
-                    probabilities[i, k] = epsilon
+                    newProbabilities[i, k] = epsilon
 
                 for k in range(sensorValue - 2, sensorValue + 2):
-                    probabilities[i, k] = probabilities[i, N - k] * sensorProbability[k - len(sensorValues) - 1]
+                    # passt noch nicht
+                    newProbabilities[i, k] = probabilities[i, N - k] * sensorProbability[k - len(sensorValues) - 1]
 
                 for k in range(sensorValue + 2, N):
-                    probabilities[i, k] = epsilon
+                    newProbabilities[i, k] = epsilon
 
             elif direction == Direction.Down:
                 return 0
@@ -245,14 +253,17 @@ def main():
     global probabilities
 
     # print(realPos.x, realPos.y)
-    plotMap(probabilities)
+    plotData()
 
     for step in steps:
         # 1. take step
-        # doStep(step.direction)
+        doStep(step.direction)
 
         # 2. calulate prior
         probabilities = calcPrior(step.direction)
+
+        # 4. plot new position
+        plotData()
 
         # distance = senseDistance(step.direction)
 
@@ -260,9 +271,6 @@ def main():
 
         # 3. calulate posterior
         calcPosterior(distance, step.direction)
-
-        # 4. plot new position
-        plotMap(probabilities)
 
         # print(realPos.x, realPos.y)
 

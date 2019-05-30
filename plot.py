@@ -1,21 +1,13 @@
+import numpy as np
 
 
-url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
-names = ['preg', 'plas', 'pres', 'skin', 'test', 'mass', 'pedi', 'age', 'class']
-data = pandas.read_csv(url, names=range(1,100))
-correlations = data.corr()
 
-# plot correlation matrix
-fig = plt.figure()
-ax = fig.add_subplot(111)
-cax = ax.matshow(correlations, vmin=-1, vmax=1)
-fig.colorbar(cax)
-ticks = numpy.arange(0,9,1)
 
-ax.set_xticks(ticks)
-ax.set_yticks(ticks)
+test = np.array([
+    [0.25, 0.125, 0.1],
+    [0.2, 0.3, 0.001]
+])
 
-ax.set_xticklabels(names)
-ax.set_yticklabels(names)
+normed = normalize(test)
 
-plt.show()
+print(test)
