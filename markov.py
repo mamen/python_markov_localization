@@ -2,7 +2,6 @@ from enum import Enum
 from random import choices
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 
 class Direction(Enum):
     Up = 1
@@ -32,11 +31,11 @@ class Step():
         self.sensedDistance = sensedDistance
         self.size = size
 
-N = 10
+N = 100
 
 map =  np.full((N, N), 0)
 
-epsilon = 1/(N*N*N*N*N)
+epsilon = 1/(N*N*N)
 
 probabilities = np.full((N, N), 1 / (N * N))
 
@@ -44,14 +43,14 @@ probabilities = np.full((N, N), 1 / (N * N))
 # y = column
 realPos = Position(x=2, y=5, direction=Direction.Right)
 
-steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
-         Step(direction=Direction.Up, sensedDistance=2, size=3),
-         Step(direction=Direction.Left, sensedDistance=1, size=4),
-         Step(direction=Direction.Down, sensedDistance=3, size=4)]
+# steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
+#          Step(direction=Direction.Up, sensedDistance=2, size=3),
+#          Step(direction=Direction.Left, sensedDistance=1, size=4),
+#          Step(direction=Direction.Down, sensedDistance=3, size=4)]
 
-# steps = [Step(direction=Direction.Right, sensedDistance=80, size=3),
-#          Step(direction=Direction.Up, sensedDistance=50, size=3),
-#          Step(direction=Direction.Up, sensedDistance=45, size=3)]
+steps = [Step(direction=Direction.Right, sensedDistance=80, size=3),
+         Step(direction=Direction.Up, sensedDistance=50, size=3),
+         Step(direction=Direction.Up, sensedDistance=45, size=3)]
 
 
 def normalize(matrix):
@@ -67,7 +66,7 @@ def plotData():
     global probabilities, realPos, epsilon
 
     # plot correlation matrix
-    fig = plt.figure()
+    fig = plt.figure(figsize=(50, 50), dpi=120)
     ax = fig.add_subplot(111)
 
     # data = normalize(probabilities)
@@ -76,6 +75,8 @@ def plotData():
     cax = ax.matshow(data, vmin=np.min(data), vmax=np.max(data))
     fig.colorbar(cax)
     ticks = np.arange(0, N, 1)
+
+    # plt.grid(which='major', axis='both', linestyle='-', color='w', linewidth=1)
 
     ax.set_xticks(ticks)
     ax.set_yticks(ticks)
@@ -86,10 +87,10 @@ def plotData():
     for i in range(len(map)):
         for j in range(len(map)):
                 if i == realPos.y and j == realPos.x:
-                    ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="red", weight="bold")
-                else:
-                    if data[i, j] > epsilon:
-                        ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
+                    ax.text(j, i, "R", ha="center", va="center", color="w", weight="bold")
+                # else:
+                    # if data[i, j] > epsilon:
+                    #     ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
 
 
     #ax.set_title("Harvest of local farmers (in tons/year)")
@@ -289,22 +290,17 @@ def senseDistance(direction):
 def main():
     global probabilities
 
-    print(realPos.x, realPos.y)
     plotData()
 
     for step in steps:
-        # 1. take step
+        # 1. take random step
         doStep(step.direction)
 
         # 2. calulate prior
         probabilities = calcPrior(step.direction)
 
-        # probabilities[probabilities < epsilon] = epsilon
-
         # 3. get sensor values
-
         distance = senseDistance(step.direction) + getSensorDerivation()
-        # distance = step.sensedDistance
 
         # 4. calulate posterior
         probabilities = calcPosterior(distance, step.direction)
@@ -312,8 +308,6 @@ def main():
         # probabilities[probabilities < epsilon] = epsilon
 
         plotData()
-
-        print(realPos.x, realPos.y)
 
 
 if __name__ == "__main__":
