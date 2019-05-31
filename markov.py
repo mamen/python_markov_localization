@@ -49,9 +49,9 @@ steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
          Step(direction=Direction.Left, sensedDistance=1, size=4),
          Step(direction=Direction.Down, sensedDistance=3, size=4)]
 
-# steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
-#          Step(direction=Direction.Up, sensedDistance=2, size=3),
-#          Step(direction=Direction.Left, sensedDistance=1, size=4)]
+# steps = [Step(direction=Direction.Right, sensedDistance=80, size=3),
+#          Step(direction=Direction.Up, sensedDistance=50, size=3),
+#          Step(direction=Direction.Up, sensedDistance=45, size=3)]
 
 
 def normalize(matrix):
