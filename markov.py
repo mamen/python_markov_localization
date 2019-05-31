@@ -64,7 +64,7 @@ def normalize(matrix):
 
 
 def plotData():
-    global probabilities, realPos
+    global probabilities, realPos, epsilon
 
     # plot correlation matrix
     fig = plt.figure()
@@ -85,10 +85,12 @@ def plotData():
 
     for i in range(len(map)):
         for j in range(len(map)):
-            # if j == realPos.x and i == realPos.y:
-            #     ax.text(realPos.x, realPos.y, np.round(data[realPos.x, realPos.y], 2), ha="center", va="center", color="red")
-            # else:
-            ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
+                if i == realPos.y and j == realPos.x:
+                    ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="red", weight="bold")
+                else:
+                    if data[i, j] > epsilon:
+                        ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
+
 
     #ax.set_title("Harvest of local farmers (in tons/year)")
     plt.show()
@@ -102,21 +104,25 @@ def calcPrior(direction):
 
     newProbabilities = np.full((N, N), 0.0)
 
+    # x = row = i
+    # y = column = j
+
     for i in range(0, N):
         for j in range(0, N):
             for stepSize in steps:
-
-                if direction == Direction.Left:
-                    if i - stepSize >= 0:
-                        newProbabilities[i - stepSize, j] += probabilities[i, j] * stepProbability[stepSize]
 
                 if direction == Direction.Right:
                     if j + stepSize < N:
                         newProbabilities[i, j + stepSize] += probabilities[i, j] * stepProbability[stepSize]
 
+                if direction == Direction.Left:
+                    if j + stepSize < N:
+                        newProbabilities[i, j] += probabilities[i, j + stepSize] * stepProbability[stepSize]
+
                 if direction == Direction.Up:
                     if i - stepSize >= 0:
                         newProbabilities[i - stepSize, j] += probabilities[i, j] * stepProbability[stepSize]
+
 
                 if direction == Direction.Down:
                     if i + stepSize < N:
@@ -143,7 +149,7 @@ def calcPosterior(sensorValue, direction):
 
             if direction == Direction.Up:
                 for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
-                    if N > N - k - 1 >= 0:
+                    if 0 <= k < N:
                         newProbabilities[k, j] = probabilities[k, j] * sensorProbability[k]
 
             elif direction == Direction.Right:
@@ -152,12 +158,10 @@ def calcPosterior(sensorValue, direction):
                     if N > N - k - 1 >= 0:
                         newProbabilities[i, N - k - 1] = probabilities[i, N - k - 1] * sensorProbability[k]
 
-
-
             elif direction == Direction.Down:
                 for k in range(sensorValue - 2, sensorValue + 2 + 1):
-                    if 0 <= k < N:
-                        newProbabilities[k, j] = probabilities[k, j] * sensorProbability[k]
+                    if N > N - k - 1 >= 0:
+                        newProbabilities[N - k - 1, j] = probabilities[N - k - 1, j] * sensorProbability[k]
 
             elif direction == Direction.Left:
                 for k in range(sensorValue - 2, sensorValue + 2 + 1):
@@ -188,6 +192,7 @@ def getStepSize():
 
 
 def doStep(direction):
+    global realPos
 
     stepSize = getStepSize()
 
@@ -284,12 +289,12 @@ def senseDistance(direction):
 def main():
     global probabilities
 
-    # print(realPos.x, realPos.y)
+    print(realPos.x, realPos.y)
     plotData()
 
     for step in steps:
         # 1. take step
-        # doStep(step.direction)
+        doStep(step.direction)
 
         # 2. calulate prior
         probabilities = calcPrior(step.direction)
@@ -298,31 +303,17 @@ def main():
 
         # 3. get sensor values
 
-        #distance = senseDistance(step.direction) + getSensorDerivation()
-        distance = step.sensedDistance
+        distance = senseDistance(step.direction) + getSensorDerivation()
+        # distance = step.sensedDistance
 
         # 4. calulate posterior
         probabilities = calcPosterior(distance, step.direction)
 
         # probabilities[probabilities < epsilon] = epsilon
 
-
-        if step.direction == Direction.Left:
-            realPos.x -= step.size
-            realPos.x = max(realPos.x, 0)
-        elif step.direction == Direction.Right:
-            realPos.x += step.size
-            realPos.x = min(realPos.x, N)
-        elif step.direction == Direction.Up:
-            realPos.y -= step.size
-            realPos.y = max(realPos.y, 0)
-        elif step.direction == Direction.Down:
-            realPos.y += step.size
-            realPos.y = min(realPos.y, N)
-
         plotData()
 
-        # print(realPos.x, realPos.y)
+        print(realPos.x, realPos.y)
 
 
 if __name__ == "__main__":
