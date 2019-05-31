@@ -85,10 +85,10 @@ def plotData():
 
     for i in range(len(map)):
         for j in range(len(map)):
-            if j == realPos.x and i == realPos.y:
-                ax.text(realPos.x, realPos.y, np.round(data[realPos.x, realPos.y], 2), ha="center", va="center", color="red")
-            else:
-                ax.text(j, i, np.round(data[i, j], 2), ha="center", va="center", color="w")
+            # if j == realPos.x and i == realPos.y:
+            #     ax.text(realPos.x, realPos.y, np.round(data[realPos.x, realPos.y], 2), ha="center", va="center", color="red")
+            # else:
+            ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
 
     #ax.set_title("Harvest of local farmers (in tons/year)")
     plt.show()
@@ -294,7 +294,7 @@ def main():
         # 2. calulate prior
         probabilities = calcPrior(step.direction)
 
-        probabilities[probabilities < epsilon] = epsilon
+        # probabilities[probabilities < epsilon] = epsilon
 
         # 3. get sensor values
 
@@ -304,7 +304,7 @@ def main():
         # 4. calulate posterior
         probabilities = calcPosterior(distance, step.direction)
 
-        probabilities[probabilities < epsilon] = epsilon
+        # probabilities[probabilities < epsilon] = epsilon
 
 
         if step.direction == Direction.Left:
