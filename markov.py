@@ -1,7 +1,7 @@
 from enum import Enum
-from random import choices
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 class Direction(Enum):
     Up = 1
@@ -10,7 +10,7 @@ class Direction(Enum):
     Left = 4
 
 
-class Position():
+class Position:
     x = 0
     y = 0
     direction = Direction.Right
@@ -21,7 +21,7 @@ class Position():
         self.direction = direction
 
 
-class Step():
+class Step:
     direction = Direction.Right
     sensedDistance = 0
     size = 0
@@ -31,26 +31,21 @@ class Step():
         self.sensedDistance = sensedDistance
         self.size = size
 
-N = 100
 
-map =  np.full((N, N), 0)
+N = 10
 
 epsilon = 1/(N*N*N)
 
 probabilities = np.full((N, N), 1 / (N * N))
 
-# x = row
-# y = column
-realPos = Position(x=2, y=5, direction=Direction.Right)
+steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
+         Step(direction=Direction.Up, sensedDistance=2, size=3),
+         Step(direction=Direction.Left, sensedDistance=1, size=4),
+         Step(direction=Direction.Down, sensedDistance=3, size=4)]
 
-# steps = [Step(direction=Direction.Right, sensedDistance=4, size=3),
-#          Step(direction=Direction.Up, sensedDistance=2, size=3),
-#          Step(direction=Direction.Left, sensedDistance=1, size=4),
-#          Step(direction=Direction.Down, sensedDistance=3, size=4)]
-
-steps = [Step(direction=Direction.Right, sensedDistance=80, size=3),
-         Step(direction=Direction.Up, sensedDistance=50, size=3),
-         Step(direction=Direction.Up, sensedDistance=45, size=3)]
+# steps = [Step(direction=Direction.Right, sensedDistance=80, size=3),
+#          Step(direction=Direction.Up, sensedDistance=50, size=3),
+#          Step(direction=Direction.Up, sensedDistance=45, size=3)]
 
 
 def normalize(matrix):
@@ -63,10 +58,10 @@ def normalize(matrix):
 
 
 def plotData():
-    global probabilities, realPos, epsilon
+    global probabilities, N, epsilon
 
     # plot correlation matrix
-    fig = plt.figure(figsize=(50, 50), dpi=120)
+    fig = plt.figure(dpi=500)
     ax = fig.add_subplot(111)
 
     # data = normalize(probabilities)
@@ -76,64 +71,55 @@ def plotData():
     fig.colorbar(cax)
     ticks = np.arange(0, N, 1)
 
-    # plt.grid(which='major', axis='both', linestyle='-', color='w', linewidth=1)
-
     ax.set_xticks(ticks)
     ax.set_yticks(ticks)
 
     ax.set_xticklabels(range(0, N))
     ax.set_yticklabels(range(0, N))
 
-    for i in range(len(map)):
-        for j in range(len(map)):
-                if i == realPos.y and j == realPos.x:
-                    ax.text(j, i, "R", ha="center", va="center", color="w", weight="bold")
-                # else:
-                    # if data[i, j] > epsilon:
-                    #     ax.text(j, i, np.round(data[i, j], 3), ha="center", va="center", color="w")
+    for i in range(len(data)):
+        for j in range(len(data)):
+            if data[i, j] > epsilon:
+                ax.text(j, i, round(data[i, j], 2), ha="center", va="center", color="w")
 
+    ax.set_title("Occupancy Grid")
 
-    #ax.set_title("Harvest of local farmers (in tons/year)")
     plt.show()
 
 
 def calcPrior(direction):
-    global probabilities, epsilon
+    global probabilities, N
 
-    steps = [3, 4, 5, 6, 7]
+    possibleStepSizes = [3, 4, 5, 6, 7]
     stepProbability = [0, 0, 0, 0.1, 0.2, 0.4, 0.2, 0.1]
 
     newProbabilities = np.full((N, N), 0.0)
 
-    # x = row = i
-    # y = column = j
-
     for i in range(0, N):
         for j in range(0, N):
-            for stepSize in steps:
+            for stepSize in possibleStepSizes:
 
                 if direction == Direction.Right:
-                    if j + stepSize < N:
-                        newProbabilities[i, j + stepSize] += probabilities[i, j] * stepProbability[stepSize]
+                    if j - stepSize >= 0:
+                        newProbabilities[i, j] += probabilities[i, j - stepSize] * stepProbability[stepSize]
 
                 if direction == Direction.Left:
                     if j + stepSize < N:
                         newProbabilities[i, j] += probabilities[i, j + stepSize] * stepProbability[stepSize]
 
                 if direction == Direction.Up:
-                    if i - stepSize >= 0:
-                        newProbabilities[i - stepSize, j] += probabilities[i, j] * stepProbability[stepSize]
-
+                    if i + stepSize < N:
+                        newProbabilities[i, j] += probabilities[i + stepSize, j] * stepProbability[stepSize]
 
                 if direction == Direction.Down:
-                    if i + stepSize < N:
-                        newProbabilities[i + stepSize, j] += probabilities[i, j] * stepProbability[stepSize]
+                    if i - stepSize >= 0:
+                        newProbabilities[i, j] += probabilities[i - stepSize, j] * stepProbability[stepSize]
 
     return newProbabilities
 
 
 def calcPosterior(sensorValue, direction):
-    global probabilities, epsilon
+    global probabilities, N
 
     sensorProbability = {
                             sensorValue - 2: 0.1,
@@ -154,7 +140,6 @@ def calcPosterior(sensorValue, direction):
                         newProbabilities[k, j] = probabilities[k, j] * sensorProbability[k]
 
             elif direction == Direction.Right:
-                # k = sensor value (-2 bis +2) +1 weil exklusive obergrenze
                 for k in range(sensorValue - 2, sensorValue + 2 + 1):
                     if N > N - k - 1 >= 0:
                         newProbabilities[i, N - k - 1] = probabilities[i, N - k - 1] * sensorProbability[k]
@@ -171,141 +156,23 @@ def calcPosterior(sensorValue, direction):
 
     newProbabilities = newProbabilities / np.sum(newProbabilities)
 
-    # newProbabilities[newProbabilities < epsilon] = epsilon
-
     return newProbabilities
 
 
-def getSensorDerivation():
-    # z_t
-    population = [-2, -1, 0, 1, 2]
-    weights = [0.1, 0.2, 0.4, 0.2, 0.1]
-
-    return choices(population, weights)[0]
-
-
-def getStepSize():
-    # x_t
-    population = [3, 4, 5, 6, 7]
-    weights = [0.1, 0.2, 0.4, 0.2, 0.1]
-
-    return choices(population, weights)[0]
-
-
-def doStep(direction):
-    global realPos
-
-    stepSize = getStepSize()
-
-    print(f'Moving {stepSize} in Direction {direction}')
-
-    if direction == Direction.Up:
-
-        if realPos.y - stepSize < 0:
-            stepSize = realPos.y
-            print(f'robot hit upper wall, moved only {stepSize}')
-
-        realPos.y = realPos.y - stepSize
-
-    elif direction == Direction.Right:
-
-        if realPos.x + stepSize > N:
-            stepSize = N - realPos.x
-            print(f'robot hit right wall, moved only {stepSize}')
-
-        realPos.x = realPos.x + stepSize
-
-    elif direction == Direction.Down:
-
-        if realPos.y + stepSize > N:
-            stepSize = N - realPos.y
-            print(f'robot hit lower wall, moved only {stepSize}')
-
-        realPos.y = realPos.y + stepSize
-
-    elif direction == Direction.Left:
-
-        if realPos.x - stepSize < 0:
-            stepSize = realPos.x
-            print(f'robot hit left wall, moved only {stepSize}')
-
-        realPos.x = realPos.x - stepSize
-
-
-def senseDistance(direction):
-    global realPos
-
-    distance = 0
-
-    if direction == Direction.Up:
-
-        for i in range(1, realPos.y+1):
-
-            if realPos.y - i < 0:
-                break
-
-            if map[realPos.x - i,  realPos.y] == 0:
-                distance += 1
-            else:
-                break
-
-    elif direction == Direction.Right:
-
-        for i in range(1, N - realPos.x):
-
-            if realPos.x + i > N:
-                break
-
-            if map[realPos.x,  realPos.y + i] == 0:
-                distance += 1
-            else:
-                break
-
-    elif direction == Direction.Down:
-
-        for i in range(1, N - realPos.y):
-
-            if realPos.y + i > N:
-                break
-
-            if map[realPos.x,  realPos.y + i] == 0:
-                distance += 1
-            else:
-                break
-
-    elif direction == Direction.Left:
-        for i in range(1, realPos.x + 1):
-
-            if realPos.x - i < 0:
-                break
-
-            if map[realPos.x - i, realPos.y] == 0:
-                distance += 1
-            else:
-                break
-
-    return distance
-
-
 def main():
-    global probabilities
+    global probabilities, steps
 
     plotData()
 
     for step in steps:
-        # 1. take random step
-        doStep(step.direction)
-
-        # 2. calulate prior
+        # 1. calulate prior
         probabilities = calcPrior(step.direction)
 
-        # 3. get sensor values
-        distance = senseDistance(step.direction) + getSensorDerivation()
+        # 2. get sensor values
+        distance = step.sensedDistance
 
-        # 4. calulate posterior
+        # 3. calulate posterior
         probabilities = calcPosterior(distance, step.direction)
-
-        # probabilities[probabilities < epsilon] = epsilon
 
         plotData()
 
