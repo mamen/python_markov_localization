@@ -40,29 +40,31 @@ map = []
 
 epsilon = 1/(N*N*N*N)
 
-probabilities = np.full((N, N), 1 / (N * N))
-
 # x = row
 # y = column
 currentPosition = Position(5, 2)
 
+# steps = [Step(direction=Direction.Up, sensedDistance=8, position=Position(5, 5))]
+
 # normal
-# steps = [Step(direction=Direction.Right, sensedDistance=1, position=Position(5, 5)),
-#          Step(direction=Direction.Up, sensedDistance=2, position=Position(2, 5)),
-#          Step(direction=Direction.Left, sensedDistance=1, position=Position(2, 1)),
-#          Step(direction=Direction.Down, sensedDistance=1, position=Position(8, 1)),
-#          Step(direction=Direction.Right, sensedDistance=3, position=Position(8, 6)),
-#          Step(direction=Direction.Up, sensedDistance=0, position=Position(0, 6))]
+# steps = [Step(direction=Direction.Right, sensedDistance=0, position=Position(5, 6)),
+#          Step(direction=Direction.Up, sensedDistance=0, position=Position(0, 6)),
+#          Step(direction=Direction.Left, sensedDistance=0, position=Position(0, 0)),
+#          Step(direction=Direction.Down, sensedDistance=5, position=Position(4, 0)),  # robot gets kidnapped here
+#          Step(direction=Direction.Right, sensedDistance=4, position=Position(4, 6)),
+#          Step(direction=Direction.Down, sensedDistance=1, position=Position(8, 5)),
+#          Step(direction=Direction.Right, sensedDistance=0, position=Position(8, 9)),
+#          Step(direction=Direction.Up, sensedDistance=1, position=Position(4, 9))]
 
 # kidnapped
 steps = [Step(direction=Direction.Right, sensedDistance=0, position=Position(5, 6)),
          Step(direction=Direction.Up, sensedDistance=0, position=Position(0, 6)),
-         Step(direction=Direction.Left, sensedDistance=0, position=Position(0, 0)),
-         Step(direction=Direction.Down, sensedDistance=5, position=Position(4, 0)),  # robot gets kidnapped here
-         Step(direction=Direction.Right, sensedDistance=4, position=Position(4, 5)),
-         Step(direction=Direction.Down, sensedDistance=1, position=Position(8, 5)),
-         Step(direction=Direction.Right, sensedDistance=0, position=Position(8, 9)),
-         Step(direction=Direction.Up, sensedDistance=3, position=Position(5, 9))]
+         Step(direction=Direction.Left, sensedDistance=0, position=Position(0, 0)),  # robot gets kidnapped here
+         Step(direction=Direction.Down, sensedDistance=0, position=Position(9, 4)),
+         Step(direction=Direction.Right, sensedDistance=0, position=Position(9, 9)),
+         Step(direction=Direction.Down, sensedDistance=1, position=Position(4, 9)),
+         Step(direction=Direction.Left, sensedDistance=5, position=Position(4, 5)),
+         Step(direction=Direction.Down, sensedDistance=1, position=Position(8, 5))]
 
 
 def normalize(matrix):
@@ -74,13 +76,13 @@ def normalize(matrix):
     return retVal
 
 
-def plotData():
-    global probabilities, epsilon, map, currentPosition
+def plotData(step, prior, posterior):
+    global epsilon, map, currentPosition
 
     fig = plt.figure(dpi=500)
     # fig.tight_layout()
 
-    gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1.07])
+    gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1.07, 1.07])
 
     # =======
     # Map
@@ -89,6 +91,9 @@ def plotData():
     ax = fig.add_subplot(gs[0])
 
     ax.matshow(map, vmin=0, vmax=1, cmap='Greys')
+
+    plt.title('Map', x=0.5, y=1.2)
+
     ticks = np.arange(0, N, 1)
 
     plt.grid(which='major', axis='both', linestyle=':', color='black')
@@ -105,14 +110,16 @@ def plotData():
     ax.set_yticklabels(range(0, N))
 
     # =======
-    # Correlation Matrix
+    # Prior
     # =======
 
     ax = fig.add_subplot(gs[1])
 
-    data = normalize(probabilities)
+    data = normalize(prior)
 
     im = ax.matshow(data, vmin=np.min(data), vmax=np.max(data))
+
+    plt.title('Prior', x=0.5, y=1.2)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -129,27 +136,45 @@ def plotData():
     ax.set_xticklabels(range(0, N))
     ax.set_yticklabels(range(0, N))
 
+    # =======
+    # Posterior
+    # =======
 
-    for i in range(len(data)):
-        for j in range(len(data)):
-            if data[i, j] > epsilon:
-                if currentPosition.x == i and currentPosition.y == j:
-                    ax.text(j, i, round(data[i, j], 2), ha="center", va="center", color="red", weight='bold')
-                else:
-                    ax.text(j, i, round(data[i, j], 2), ha="center", va="center", color="w")
+    ax = fig.add_subplot(gs[2])
 
-    plt.tight_layout()
+    data = normalize(posterior)
+
+    im = ax.matshow(data, vmin=np.min(data), vmax=np.max(data))
+
+    plt.title('Posterior', x=0.5, y=1.2)
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+
+    fig.colorbar(im, cax=cax)
+
+    ticks = np.arange(0, N, 1)
+
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+
+    ax.set_xticklabels(range(0, N))
+    ax.set_yticklabels(range(0, N))
+
+    # plt.tight_layout()
 
     plt.show()
 
+    fig.savefig(f"step{step}.png")
 
-def calcPrior(direction):
-    global probabilities, epsilon, map
+
+def calcPrior(oldPosterior, direction):
+    global epsilon, map
 
     steps = [3, 4, 5, 6, 7]
     stepProbability = [0, 0, 0, 0.1, 0.2, 0.4, 0.2, 0.1]
 
-    newProbabilities = np.full((N, N), 0.0)
+    prior = np.full((N, N), 0.0)
 
     # x = row = i
     # y = column = j
@@ -177,11 +202,12 @@ def calcPrior(direction):
                                 if j - stepSize >= 0:
                                     skip = False
                                     for t in range(0, stepSize + 1):
-                                        if map[i, j - t] == 1:
+                                        if j - t >= 0 and map[i, j - t] == 1:
                                             skip = True
                                             break
                                     if not skip:
-                                        newProbabilities[i, j] += probabilities[i, j - stepSize] * stepProbability[stepSize]
+                                        if j - stepSize >= 0:
+                                            prior[i, j] += oldPosterior[i, j - stepSize] * stepProbability[stepSize]
                                     else:
                                         break
                     # robot moves to the left
@@ -196,11 +222,12 @@ def calcPrior(direction):
                                 if j + stepSize < N:
                                     skip = False
                                     for t in range(0, stepSize + 1):
-                                        if map[i, j + t] == 1:
+                                        if j + t < N and map[i, j + t] == 1:
                                             skip = True
                                             break
                                     if not skip:
-                                        newProbabilities[i, j] += probabilities[i, j + stepSize] * stepProbability[stepSize]
+                                        if j + stepSize < N:
+                                            prior[i, j] += oldPosterior[i, j + stepSize] * stepProbability[stepSize]
                                     else:
                                         break
                 # no wall in this row
@@ -209,10 +236,10 @@ def calcPrior(direction):
                     for stepSize in steps:
                         if direction == Direction.Right:
                             if j - stepSize >= 0:
-                                newProbabilities[i, j] += probabilities[i, j - stepSize] * stepProbability[stepSize]
+                                prior[i, j] += oldPosterior[i, j - stepSize] * stepProbability[stepSize]
                         if direction == Direction.Left:
                             if j + stepSize < N:
-                                newProbabilities[i, j] += probabilities[i, j + stepSize] * stepProbability[stepSize]
+                                prior[i, j] += oldPosterior[i, j + stepSize] * stepProbability[stepSize]
 
             # vertical movement
             elif direction == Direction.Down or direction == Direction.Up:
@@ -232,11 +259,12 @@ def calcPrior(direction):
                                 if i + stepSize < N:
                                     skip = False
                                     for t in range(0, stepSize + 1):
-                                        if map[i + t, j] == 1:
+                                        if i + t < N and map[i + t, j] == 1:
                                             skip = True
                                             break
                                     if not skip:
-                                        newProbabilities[i, j] += probabilities[i + stepSize, j] * stepProbability[stepSize]
+                                        if i + stepSize < N:
+                                            prior[i, j] += oldPosterior[i + stepSize, j] * stepProbability[stepSize]
                                     else:
                                         break
                     # robot moves down
@@ -252,11 +280,13 @@ def calcPrior(direction):
                                 if i - stepSize >= 0:
                                     skip = False
                                     for t in range(0, stepSize + 1):
-                                        if map[i - t, j] == 1:
+                                        if 0 <= i - t and map[i - t, j] == 1:
                                             skip = True
                                             break
                                     if not skip:
-                                        newProbabilities[i, j] += probabilities[i - stepSize, j] * stepProbability[stepSize]
+                                        if i - stepSize > 0:
+                                            prior[i, j] += oldPosterior[i - stepSize, j] * stepProbability[
+                                            stepSize]
                                     else:
                                         break
                 # no wall in this row
@@ -265,17 +295,17 @@ def calcPrior(direction):
                     for stepSize in steps:
                         if direction == Direction.Up:
                             if i + stepSize < N:
-                                newProbabilities[i, j] += probabilities[i + stepSize, j] * stepProbability[stepSize]
+                                prior[i, j] += oldPosterior[i + stepSize, j] * stepProbability[stepSize]
 
                         if direction == Direction.Down:
                             if i - stepSize >= 0:
-                                newProbabilities[i, j] += probabilities[i - stepSize, j] * stepProbability[stepSize]
+                                prior[i, j] += oldPosterior[i - stepSize, j] * stepProbability[stepSize]
 
-    return newProbabilities
+    return prior
 
 
-def calcPosterior(sensorValue, direction):
-    global probabilities, epsilon, map
+def calcPosterior(sensorValue, direction, prior):
+    global epsilon, map
 
     sensorProbability = {
                             sensorValue - 2: 0.1,
@@ -285,7 +315,7 @@ def calcPosterior(sensorValue, direction):
                             sensorValue + 2: 0.1
                         }
 
-    newProbabilities = np.full((N, N), 0.0)
+    posterior = np.full((N, N), 0.0)
 
     for i in range(0, N):
         for j in range(0, N):
@@ -299,13 +329,13 @@ def calcPosterior(sensorValue, direction):
                     if direction == Direction.Right:
 
                         # wall found, restart right from the next field
-                        if map[i, N - j - 1] == 1:
+                        if map[i, j] == 1:
                             continue
                         else:
                             # is there a wall in range?
                             for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
-                                if j + k + 1 >= N or map[i, j + k + 1] == 1:
-                                    newProbabilities[i, j] = probabilities[i, j] * sensorProbability[k]
+                                if j + k + 1 == N or (j + k + 1 < N and map[i, j + k + 1] == 1):
+                                    posterior[i, j] = prior[i, j] * sensorProbability[k]
                     # left
                     elif direction == Direction.Left:
                         # wall found, restart right from the next field
@@ -314,8 +344,8 @@ def calcPosterior(sensorValue, direction):
                         else:
                             # is there a wall in range?
                             for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
-                                if j - k - 1 < 0 or map[i, j - k - 1] == 1:
-                                    newProbabilities[i, j] = probabilities[i, j] * sensorProbability[k]
+                                if j - k - 1 == -1 or (j - k - 1 >= 0 and map[i, j - k - 1] == 1):
+                                    posterior[i, j] = prior[i, j] * sensorProbability[k]
 
                 # no wall in this row
                 else:
@@ -323,11 +353,11 @@ def calcPosterior(sensorValue, direction):
                     if direction == Direction.Right:
                         for k in range(sensorValue - 2, sensorValue + 2 + 1):
                             if N > N - k - 1 >= 0:
-                                newProbabilities[i, N - k - 1] = probabilities[i, N - k - 1] * sensorProbability[k]
+                                posterior[i, N - k - 1] = prior[i, N - k - 1] * sensorProbability[k]
                     if direction == Direction.Left:
                         for k in range(sensorValue - 2, sensorValue + 2 + 1):
                             if 0 <= k < N:
-                                newProbabilities[i, k] = probabilities[i, k] * sensorProbability[k]
+                                posterior[i, k] = prior[i, k] * sensorProbability[k]
 
             #vertical movement
             elif direction == Direction.Down or direction == Direction.Up:
@@ -336,28 +366,25 @@ def calcPosterior(sensorValue, direction):
 
                     # robot moves up
                     if direction == Direction.Up:
-
                         # wall found, restart right from the next field
                         if map[i, j] == 1:
                             continue
                         else:
                             # is there a wall in range?
                             for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
-                                if i - k - 1 < 0 or map[i - k - 1, j] == 1:
-                                    newProbabilities[i, j] = probabilities[i, j] * sensorProbability[k]
+                                if i - k - 1 == -1 or (i - k - 1 >= 0 and map[i - k - 1, j] == 1):
+                                    posterior[i, j] = prior[i, j] * sensorProbability[k]
 
                     # robot moves down
                     else:
-
                         # wall found, restart right from the next field
                         if map[i, j] == 1:
                             continue
                         else:
                             # is there a wall in range?
                             for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
-                                if i + k + 1 >= N or map[i + k + 1, j] == 1:
-                                    newProbabilities[i, j] = probabilities[i, j] * sensorProbability[k]
-
+                                if i + k + 1 == N or (i + k + 1 < N and map[i + k + 1, j] == 1):
+                                    posterior[i, j] = prior[i, j] * sensorProbability[k]
 
                 # no wall in this column
                 else:
@@ -365,19 +392,19 @@ def calcPosterior(sensorValue, direction):
                     if direction == Direction.Up:
                         for k in range(max(0, sensorValue - 2), sensorValue + 2 + 1):
                             if 0 <= k < N:
-                                newProbabilities[k, j] = probabilities[k, j] * sensorProbability[k]
+                                posterior[k, j] = prior[k, j] * sensorProbability[k]
 
                     if direction == Direction.Down:
                         for k in range(sensorValue - 2, sensorValue + 2 + 1):
                             if N > N - k - 1 >= 0:
-                                newProbabilities[N - k - 1, j] = probabilities[N - k - 1, j] * sensorProbability[k]
+                                posterior[N - k - 1, j] = prior[N - k - 1, j] * sensorProbability[k]
 
 
-    newProbabilities[newProbabilities < epsilon] = epsilon
+    posterior[posterior < epsilon] = epsilon
 
-    newProbabilities = newProbabilities / np.sum(newProbabilities)
+    posterior = posterior / np.sum(posterior)
 
-    return newProbabilities
+    return posterior
 
 
 def getSensorDerivation():
@@ -492,16 +519,14 @@ def senseDistance(direction):
 
 
 def main():
-    global probabilities, map, currentPosition
+    global map, currentPosition
 
     map = np.empty((N, N))
     map[:] = 0
 
-    map[0, 8] = 1
-    map[0, 9] = 1
     map[1, 1] = 1
     map[1, 8] = 1
-    map[1, 9] = 1
+    map[2, 9] = 1
     map[3, 4] = 1
     map[5, 7] = 1
     map[6, 8] = 1
@@ -509,25 +534,36 @@ def main():
     map[7, 3] = 1
     map[7, 7] = 1
 
-    plotData()
+    probabilities = np.full((N, N), 1 / (N * N - np.sum(map)))
+
+    i = 0
+
+    plotData(i, probabilities, probabilities)
+
+
 
     for step in steps:
+        i += 1
         # 1. take random step
         # doStep(step.direction)
 
         currentPosition = step.realPosition
 
         # 2. calulate prior
-        probabilities = calcPrior(step.direction)
+        prior = calcPrior(probabilities, step.direction)
 
         # 3. get sensor values
         # distance = senseDistance(step.direction) + getSensorDerivation()
         distance = step.sensedDistance
 
         # 4. calulate posterior
-        probabilities = calcPosterior(distance, step.direction)
+        posterior = calcPosterior(distance, step.direction, prior)
 
-        plotData()
+        # probabilities[map == 1] = 0
+
+        plotData(i, prior, posterior)
+
+        probabilities = posterior
 
 
 if __name__ == "__main__":
