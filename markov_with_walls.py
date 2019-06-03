@@ -62,7 +62,7 @@ steps = [Step(direction=Direction.Right, sensedDistance=0, position=Position(5, 
          Step(direction=Direction.Left, sensedDistance=0, position=Position(0, 0)),  # robot gets kidnapped here
          Step(direction=Direction.Down, sensedDistance=0, position=Position(9, 4)),
          Step(direction=Direction.Right, sensedDistance=0, position=Position(9, 9)),
-         Step(direction=Direction.Down, sensedDistance=1, position=Position(4, 9)),
+         Step(direction=Direction.Up, sensedDistance=1, position=Position(4, 9)),
          Step(direction=Direction.Left, sensedDistance=5, position=Position(4, 5)),
          Step(direction=Direction.Down, sensedDistance=1, position=Position(8, 5))]
 
